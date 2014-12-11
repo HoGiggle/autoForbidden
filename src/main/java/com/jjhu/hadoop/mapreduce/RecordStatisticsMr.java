@@ -17,11 +17,8 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 
 public class RecordStatisticsMr {
-    private static Map<String, Map<String, Set<Integer>>> ip_sameUser_map_register = new HashMap<String, Map<String, Set<Integer>>>();
-    private static Map<String, Set<Integer>> ip_mailUser_map_register = new HashMap<String, Set<Integer>>();
-    private static Map<String, Map<String, Set<Integer>>> ip_sameUser_map_login = new HashMap<String, Map<String, Set<Integer>>>();
-    private static Map<String, Set<Integer>> ip_mailUser_map_login = new HashMap<String, Set<Integer>>();
 
+    
     public static void main(String[] args) {
     }
 
@@ -53,34 +50,53 @@ public class RecordStatisticsMr {
 
     public static class StatisticsReducer
             extends Reducer<IntWritable, Text, Text, Text> {
+        public static Map<String, Map<String, Set<Integer>>> ip_sameUser_map_register = new HashMap<String, Map<String, Set<Integer>>>();
+        public static Map<String, Set<Integer>> ip_mailUser_map_register = new HashMap<String, Set<Integer>>();
+        public static Map<String, Map<String, Set<Integer>>> ip_sameUser_map_login = new HashMap<String, Map<String, Set<Integer>>>();
+        public static Map<String, Set<Integer>> ip_mailUser_map_login = new HashMap<String, Set<Integer>>();
+        private final Date NOWDATE = new Date();
         private final int MAX_CAISHEN_INTERVAL = 10000;
         private final String MIN_DATE = "1900-01-01 00:00:00";
+        private final long RECHARGE_HOUR_BOUNDS = 12l;//充值时间界值，单位：小时。用处：多少小时内的充值金额
+        private SimpleDateFormat DATEFORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置为final时区信息没法更新
 
         protected void reduce(IntWritable key, Iterable<Text> values, Context context)
                 throws IOException, InterruptedException {
-            SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-            String date = null;
+            String nowDate = null;
             int userID = key.get();
             int diandianFlag = 0;
-            float rechargeAmount = 0.0F;
-            int caishenInterval = 10000;
+            float rechargeAmount = 0.0F;//
+            int caishenInterval = MAX_CAISHEN_INTERVAL;
             int caishenFlag = 0;
-            String caishenNewestDate = "1900-01-01 00:00:00";
+            String caishenNewestDate = MIN_DATE;
+
+            Text firstMsg = values.iterator().next();
+            DATEFORMAT.setTimeZone(TimeZone.getTimeZone("GMT+" + (int) Float.parseFloat(firstMsg.toString().split("|")[2].substring(0, 3))));//获取日志时间所用时区，并设置
+            nowDate = DATEFORMAT.format(NOWDATE);
+
             for (Text msg : values) {
                 String[] items = msg.toString().split("|");
-                sf.setTimeZone(TimeZone.getTimeZone("GMT+" + (int) Float.parseFloat(items[2].substring(0, 3))));
-                date = sf.format(new Date());
+                String date_time = items[2].substring(5, items[2].length());//日志发生时间，截去时区
+                long hourInterval = 0;
+                try {
+                    hourInterval = (DATEFORMAT.parse(nowDate).getTime() - DATEFORMAT.parse(date_time).getTime()) / 1000*60*60l;
+                } catch (ParseException e) {
+                    System.out.println(date_time + " StatisticReducer:hourInterval date_time is error!" );
+                    e.printStackTrace();
+                }
                 if (items[0].equals("Recharge")) {//充值日志reduce
-                    rechargeAmount += Float.parseFloat(items[8]);
+                    if (hourInterval <= RECHARGE_HOUR_BOUNDS)
+                        rechargeAmount += Float.parseFloat(items[8]);
+
                     if (items[9].equals("diandian")) {
                         diandianFlag = 1;
                     }
-                //短信充值次数：由CommonService smsRechargeTimes实现，参数为充值节点list/时间间隔
+
+                    //短信充值次数：由CommonService smsRechargeTimes实现，参数为充值节点list/时间间隔
 
                 } else if (items[0].equals("UserAction")) {//用户行为日志reduce
                     if (items[8].equals("enter_caishen")) {
-                        String date_time = items[2].substring(5, items[2].length());
+
                         caishenFlag = 1;
                         caishenNewestDate = caishenNewestDate.compareTo(date_time) > 0 ? caishenNewestDate : date_time;
                     } else if (items[8].equals("register")) {
@@ -146,12 +162,13 @@ public class RecordStatisticsMr {
             }
             if (caishenFlag == 1) {
                 try {
-                    caishenInterval = (int) ((sf.parse(date).getTime() - sf.parse(caishenNewestDate).getTime()) / 24*60*60*1000L);
+                    caishenInterval = (int) ((DATEFORMAT.parse(nowDate).getTime() - DATEFORMAT.parse(caishenNewestDate).getTime()) / 24*60*60*1000L);
                 } catch (ParseException e) {
+                    System.out.println(caishenNewestDate + " StatisticReducer:caishenNewestDate dateParse is error!");
                     e.printStackTrace();
                 }
             }
-            context.write(new Text(date + "|" + userID + "|" + diandianFlag + "|" + rechargeAmount + "|" + caishenInterval + "|" + caishenNewestDate), new Text());
+            context.write(new Text(nowDate + "|" + userID + "|" + diandianFlag + "|" + rechargeAmount + "|" + caishenInterval + "|" + caishenNewestDate), new Text());
         }
     }
 }
