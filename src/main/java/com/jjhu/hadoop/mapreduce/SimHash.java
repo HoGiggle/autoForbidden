@@ -29,20 +29,39 @@ public class SimHash {
         this.intSimHash = this.simHash();
     }
 
+    public String getTokens() {
+        return tokens;
+    }
+
+    public BigInteger getIntSimHash() {
+        return intSimHash;
+    }
+
+    public String getStrSimHash() {
+        return strSimHash;
+    }
+
+    public int getHashbits() {
+        return hashbits;
+    }
+
     public BigInteger simHash() {
         int[] v = new int[this.hashbits];
         StringTokenizer stringTokens = new StringTokenizer(this.tokens);
         while (stringTokens.hasMoreTokens()) {
             String temp = stringTokens.nextToken();
             BigInteger t = this.hash(temp);
+            int weights = 0;
             for (int i = 0; i < this.hashbits; i++) {
                 BigInteger bitmask = new BigInteger("1").shiftLeft(i);
+                //权重都为1，此处进行权重处理及hash累加
                 if (t.and(bitmask).signum() != 0) {
-                    v[i] += 1;
+                    v[i] += ( 1);
                 } else {
-                    v[i] -= 1;
+                    v[i] -= (1);
                 }
             }
+            weights++;
         }
         BigInteger fingerprint = new BigInteger("0");
         StringBuffer simHashBuffer = new StringBuffer();
@@ -55,7 +74,6 @@ public class SimHash {
             }
         }
         this.strSimHash = simHashBuffer.toString();
-        System.out.println(this.strSimHash + " length " + this.strSimHash.length());
         return fingerprint;
     }
 
@@ -84,11 +102,6 @@ public class SimHash {
 
         BigInteger x = this.intSimHash.xor(other.intSimHash);
         int tot = 0;
-
-        //统计x中二进制位数为1的个数
-        //我们想想，一个二进制数减去1，那么，从最后那个1（包括那个1）后面的数字全都反了，对吧，然后，n&(n-1)就相当于把后面的数字清0，
-        //我们看n能做多少次这样的操作就OK了。
-
         while (x.signum() != 0) {
             tot += 1;
             x = x.and(x.subtract(new BigInteger("1")));
@@ -141,21 +154,19 @@ public class SimHash {
 
     public static void main(String[] args) {
         String s = "This is a test string for testing";
-
         SimHash hash1 = new SimHash(s, 64);
         System.out.println(hash1.intSimHash + "  " + hash1.intSimHash.bitLength());
 
-        hash1.subByDistance(hash1, 3);
-
-        System.out.println("\n");
+//        hash1.subByDistance(hash1, 3);
+//        System.out.println("\n");
         s = "This is a test string for testing, This is a test string for testing abcdef";
         SimHash hash2 = new SimHash(s, 64);
         System.out.println(hash2.intSimHash+ "  " + hash2.intSimHash.bitCount());
-        hash1.subByDistance(hash2, 3);
+//        hash1.subByDistance(hash2, 3);
         s = "This is a test string for testing als";
         SimHash hash3 = new SimHash(s, 64);
         System.out.println(hash3.intSimHash+ "  " + hash3.intSimHash.bitCount());
-        hash1.subByDistance(hash3, 3);
+//        hash1.subByDistance(hash3, 3);
         System.out.println("============================");
         int dis = hash1.getDistance(hash1.strSimHash,hash2.strSimHash);
 
@@ -164,8 +175,5 @@ public class SimHash {
         int dis2 = hash1.getDistance(hash1.strSimHash,hash3.strSimHash);
 
         System.out.println(hash1.hammingDistance(hash3) + " " + dis2);
-
-
-
     }
 }
