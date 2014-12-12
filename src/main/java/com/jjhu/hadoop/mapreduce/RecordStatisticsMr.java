@@ -168,6 +168,8 @@ public class RecordStatisticsMr {
                     e.printStackTrace();
                 }
             }
+
+            //方法内部，输出日志用StringBuilder实现!
             context.write(new Text(nowDate + "|" + userID + "|" + diandianFlag + "|" + rechargeAmount + "|" + caishenInterval + "|" + caishenNewestDate), new Text());
         }
     }
