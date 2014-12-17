@@ -47,7 +47,7 @@ public class SimHash {
 
     public BigInteger simHash() {
         int[] v = new int[this.hashbits];
-        StringTokenizer stringTokens = new StringTokenizer(this.tokens);
+        StringTokenizer stringTokens = new StringTokenizer(this.tokens);//分词
         while (stringTokens.hasMoreTokens()) {
             String temp = stringTokens.nextToken();
             BigInteger t = this.hash(temp);
@@ -56,9 +56,9 @@ public class SimHash {
                 BigInteger bitmask = new BigInteger("1").shiftLeft(i);
                 //权重都为1，此处进行权重处理及hash累加
                 if (t.and(bitmask).signum() != 0) {
-                    v[i] += ( 1);
+                    v[i] += 1;
                 } else {
-                    v[i] -= (1);
+                    v[i] -= 1;
                 }
             }
             weights++;
@@ -124,9 +124,9 @@ public class SimHash {
         return distance;
     }
 
-    public List subByDistance(SimHash simHash, int distance){
+    public List<BigInteger> subByDistance(SimHash simHash, int distance){
         int numEach = this.hashbits/(distance+1);
-        List characters = new ArrayList();
+        List<BigInteger> characters = new ArrayList();
 
         StringBuffer buffer = new StringBuffer();
 
@@ -143,7 +143,7 @@ public class SimHash {
 
             if( (i+1)%numEach == 0 ){
                 BigInteger eachValue = new BigInteger(buffer.toString(),2);
-                System.out.println("----" +eachValue );
+                System.out.println("----" + eachValue );
                 buffer.delete(0, buffer.length());
                 characters.add(eachValue);
             }
@@ -157,16 +157,15 @@ public class SimHash {
         SimHash hash1 = new SimHash(s, 64);
         System.out.println(hash1.intSimHash + "  " + hash1.intSimHash.bitLength());
 
-//        hash1.subByDistance(hash1, 3);
-//        System.out.println("\n");
+        hash1.subByDistance(hash1, 3);
         s = "This is a test string for testing, This is a test string for testing abcdef";
         SimHash hash2 = new SimHash(s, 64);
         System.out.println(hash2.intSimHash+ "  " + hash2.intSimHash.bitCount());
-//        hash1.subByDistance(hash2, 3);
+        hash1.subByDistance(hash2, 3);
         s = "This is a test string for testing als";
         SimHash hash3 = new SimHash(s, 64);
         System.out.println(hash3.intSimHash+ "  " + hash3.intSimHash.bitCount());
-//        hash1.subByDistance(hash3, 3);
+        hash1.subByDistance(hash3, 3);
         System.out.println("============================");
         int dis = hash1.getDistance(hash1.strSimHash,hash2.strSimHash);
 
