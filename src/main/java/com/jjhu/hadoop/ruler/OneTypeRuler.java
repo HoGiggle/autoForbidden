@@ -5,20 +5,19 @@ package com.jjhu.hadoop.ruler;
  * Created by jjhu on 2014/12/1.
  */
 public abstract class OneTypeRuler extends Ruler {
-    int loginDay;
-    float rechargeAmount;
-    int rechargeByDiandian;
+    int continueLoginDays;
+    float lowRechargeAmount;
+    float highRechargeAmount;
+    int diandianFlag;
     int playTimes;
-    int godInterval;
+    int caishenInterval;
 
-    protected OneTypeRuler(int loginDay, float rechargeAmount, int rechargeByDiandian, int playTimes, int godInterval) {
-        this.loginDay = loginDay;
-        this.rechargeAmount = rechargeAmount;
-        this.rechargeByDiandian = rechargeByDiandian;
+    protected OneTypeRuler(int continueLoginDays, float lowRechargeAmount, float highRechargeAmount, int diandianFlag, int playTimes, int caishenInterval) {
+        this.continueLoginDays = continueLoginDays;
+        this.lowRechargeAmount = lowRechargeAmount;
+        this.highRechargeAmount = highRechargeAmount;
+        this.diandianFlag = diandianFlag;
         this.playTimes = playTimes;
-        this.godInterval = godInterval;
-    }
-
-    protected OneTypeRuler() {
+        this.caishenInterval = caishenInterval;
     }
 }
