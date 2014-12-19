@@ -7,6 +7,8 @@ import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * CommonService类提供一些公共方法
@@ -147,5 +149,22 @@ public class CommonService {
         } finally {
             return maxCount;
         }
+    }
+
+    public static String getCommonIp(Map<String, Integer> map){
+        if (map != null && map.size() > 0){
+            int maxTimes = 0;
+            String commonIp = null;
+
+            Set<Map.Entry<String, Integer>> set = map.entrySet();
+            for (Map.Entry<String, Integer> entry : set){
+                if (entry.getValue() > maxTimes){
+                    maxTimes = entry.getValue();
+                    commonIp = entry.getKey();
+                }
+            }
+            return commonIp;
+        }else
+            return null;
     }
 }
