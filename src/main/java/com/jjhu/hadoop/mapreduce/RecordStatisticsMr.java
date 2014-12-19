@@ -24,7 +24,7 @@ public class RecordStatisticsMr {
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             String line = new String(value.getBytes(),"GBK");
-            String []items = line.split("|");
+            String []items = line.split("\\|");
             int userID;
             int logTag;
             if (items.length > 15) {//区别于系统日志
@@ -54,7 +54,7 @@ public class RecordStatisticsMr {
         protected void map(LongWritable key, Text value, Context context)
                 throws IOException, InterruptedException {
             String line = new String(value.getBytes(), "GBK");
-            String[] items = line.split("|");
+            String[] items = line.split("\\|");
             int userID = Integer.parseInt(items[5]);
             context.write(new IntWritable(userID), new Text(this.fileTag + "|" + line));
             /*
@@ -71,11 +71,13 @@ public class RecordStatisticsMr {
         public static Map<String, Set<Integer>> ip_mailUser_map_register = new HashMap<>();
         public static Map<String, Map<String, Set<Integer>>> ip_sameUser_map_login = new HashMap<>();
         public static Map<String, Set<Integer>> ip_mailUser_map_login = new HashMap<>();
+        public static Map<String, Integer> ip_times_sameRecharge = new HashMap<>();
         private final Date NOWDATE = new Date();
         private final int MAX_CAISHEN_INTERVAL = 10000;
         private final String MIN_DATE = "1900-01-01 00:00:00";
         private final long RECHARGE_HOUR_BOUNDS = 12l;
         private final long RECHARGE_MINUTE_BOUNDS = 3l;
+        private final int  RECHARGE_TIMES_BOUNDS = 2;
         private SimpleDateFormat DATEFORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置为final时区信息没法更新?
 
         protected void reduce(IntWritable key, Iterable<Text> values, Context context)
@@ -91,7 +93,10 @@ public class RecordStatisticsMr {
             int caishenFlag = 0;
             int caishenInterval = MAX_CAISHEN_INTERVAL;//单位：h
             String caishenNewestDate = MIN_DATE;
+            String commonIp = null;
             int ipSameNameRegisterNum = 0;
+            int ipHaveMailRegisterNum = 0;
+            int ipSameNameLoginNum = 0;
             int ipHaveMailLoginNum = 0;
             int smsRechargTimes = 0;
             int ipSmsRechargeExpNum = 0;
@@ -100,10 +105,11 @@ public class RecordStatisticsMr {
 
             //每个userid特征中间量
             List<String> smsRechargeDates = new ArrayList<>();
-            List result = new ArrayList<>();
+            Map<String, Integer> ip_times = new HashMap<>();
+            Map<String, Integer> ip_times_smsRecharge = new HashMap<>();
 
             //从日志中取出公共部分
-            String []line = values.iterator().next().toString().split("|");
+            String []line = values.iterator().next().toString().split("\\|");
             DATEFORMAT.setTimeZone(TimeZone.getTimeZone("GMT+" + (int) Float.parseFloat(line[1].substring(0, 3))));//获取日志时间所用时区，并设置
             nowDate = DATEFORMAT.format(NOWDATE);
             continueloginDays = Integer.parseInt(line[17]);
@@ -112,11 +118,17 @@ public class RecordStatisticsMr {
             rechargeAmount = Integer.parseInt(line[16]);
 
             for (Text msg : values) {
-                String[] items = msg.toString().split("|");
+                String[] items = msg.toString().split("\\|");
                 String date_time = items[1].substring(5, items[1].length());
+                String ip = items[11];
+                if (ip_times.containsKey(ip))//维护userid 常用ip map
+                    ip_times.put(ip,ip_times.get(ip).intValue() + 1);
+                else {
+                    ip_times.put(ip,1);
+                }
 
                 if (Integer.parseInt(items[0]) == LogTag.RECHARGE.getValue()) {//充值日志处理
-                   /*if (items[4].equals("pay_for_order")){
+                   if (items[4].equals("pay_for_order")){
                        long hourInterval = 1000;
                        try {
                            hourInterval = (DATEFORMAT.parse(nowDate).getTime() - DATEFORMAT.parse(date_time).getTime()) / 1000*60*60l;
@@ -129,10 +141,15 @@ public class RecordStatisticsMr {
 
                        if (items[18].equals("diandian"))
                            diandianFlag = 1;
-
-                       if (items[18].equals("sms"))
+                       else if (items[18].equals("sms")){
+                           if (ip_times.containsKey(ip))//维护userid 短信充值常用ip map
+                               ip_times_smsRecharge.put(ip,ip_times.get(ip).intValue() + 1);
+                           else {
+                               ip_times_smsRecharge.put(ip, 1);
+                           }
                            smsRechargeDates.add(date_time);
-                   }*/
+                       }
+                   }
                 } else if (Integer.parseInt(items[0]) == LogTag.USERACTION.getValue()) {//行为日志处理
                     if (items[4].equals("caishen_bet")){
                         caishenFlag = 1;
@@ -206,7 +223,6 @@ public class RecordStatisticsMr {
             }
 
             //每个userid特征信息赋值
-            //smsRechargTimes = CommonService.smsRechargeTimes(smsRechargeDates, RECHARGE_MINUTE_BOUNDS);
             if (caishenFlag == 1) {
                 try {
                     caishenInterval = (int) ((DATEFORMAT.parse(nowDate).getTime() - DATEFORMAT.parse(caishenNewestDate).getTime()) / 24*60*60*1000L);
@@ -216,7 +232,45 @@ public class RecordStatisticsMr {
                 }
             }
 
+
+            commonIp = CommonService.getCommonIp(ip_times);   //常用ip赋值
+
+            if (ip_times_smsRecharge.size() > 0){             //维护同一ip下用户短信充值异常人次map,如果有短信充值行为,常用ip为常用短信充值ip
+                String smsRechargeIp = CommonService.getCommonIp(ip_times_smsRecharge);
+                if (ip_times_smsRecharge.get(smsRechargeIp) >= RECHARGE_TIMES_BOUNDS){
+                    if (ip_times_sameRecharge.containsKey(smsRechargeIp))
+                        ip_times_sameRecharge.put(smsRechargeIp,ip_times_sameRecharge.get(smsRechargeIp) + 1);
+                    else
+                        ip_times_sameRecharge.put(smsRechargeIp,1);
+                }
+                commonIp = smsRechargeIp;
+            }
+
+            smsRechargTimes = CommonService.smsRechargeTimes(smsRechargeDates, RECHARGE_MINUTE_BOUNDS);//3分钟内短信充值次数
+
+            //同一ip创建账号部分
+            /*同一ip昵称相同账号
+            1) select username, ip(结果集为空，说明不是12小时注册的账号，不处理)
+                from 注册表
+                 where userid = userID and date >= lowDate
+            2) select count(*)
+                 from 12小时内注册表
+                   group by ip,username
+                   having username = userName and ip = IP
+            3) 赋值ipSameNameRegisterNum
+            */
+            /*同一ip绑定邮箱账号
+            1) select ip (结果集为空，说明不是12小时注册的账号，不处理)
+                 from 注册表
+                   where userid = userID and date >= lowDate
+            2) select count(*)
+                 from 注册表
+                   where ip = IP and date >= lowDate
+            3) 赋值ipHaveMailRegisterNum
+            */
+
             //方法内部，输出日志用StringBuilder实现!(StringUtils join)
+            List result = new ArrayList<>();
             result.add(nowDate);
             result.add(userID);
             result.add(continueloginDays);
@@ -227,6 +281,17 @@ public class RecordStatisticsMr {
             result.add(caishenFlag);
             result.add(caishenInterval);
             result.add(caishenNewestDate);
+            result.add(commonIp);
+            result.add(periodRechargeAmount);
+            result.add(smsRechargTimes);
+            result.add(maxCoinsChange);
+            result.add(ipSameNameRegisterNum);
+            result.add(ipHaveMailRegisterNum);
+            /*
+               result.add(ipSameNameLoginNum);
+               result.add(ipHaveMailLoginNum);
+               result.add(ipSmsRechargeExpNum);
+            */
             context.write(new IntWritable(userID), new Text(StringUtils.join(result, "|")));
         }
     }
