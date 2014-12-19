@@ -22,9 +22,8 @@ public class AllRulerCommand implements Command {
     public ReturnMsg execute() {
         for (Ruler ruler : rulers){
             ReturnMsg rt = ruler.execute(userMessage);
-            if (rt != null){
+            if (rt != null)
                 return rt;
-            }
         }
         return null;
     }

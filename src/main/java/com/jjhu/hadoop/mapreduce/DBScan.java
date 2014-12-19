@@ -105,7 +105,6 @@ public class DBScan {
                 System.out.println(data.getClusterID() + "  " + data.getEmail());
             else {
                 System.out.println(data.getClusterID() + "  " + data.getEmail());
-
             }
         }
     }

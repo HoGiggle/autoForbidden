@@ -5,21 +5,21 @@ package com.jjhu.hadoop.dataStructure;
  * Created by jjhu on 2014/12/1.
  */
 public class ReturnMsg {
-    private String userId;
+    private int userId;
     private String type;
 
     public ReturnMsg() {
     }
 
-    public ReturnMsg(String id, String type){
+    public ReturnMsg(int id, String type){
         this.userId = id;
         this.type = type;
     }
-    public String getUserId() {
+    public int getUserId() {
         return userId;
     }
 
-    public void setUserId(String userId) {
+    public void setUserId(int userId) {
         this.userId = userId;
     }
 
