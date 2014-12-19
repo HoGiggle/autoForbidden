@@ -14,7 +14,7 @@ public class TwoBasicRuler extends OneTypeRuler {
     @Override
     public ReturnMsg execute(String msg) {
         ReturnMsg result = null;
-        String []items = msg.split("|");
+        String []items = msg.split("\\|");
         if (Float.parseFloat(items[3]) <= highRechargeAmount && Float.parseFloat(items[3]) > lowRechargeAmount)
             if (Integer.parseInt(items[5]) <= playTimes)
                 if (Integer.parseInt(items[8]) > caishenInterval)
@@ -25,13 +25,4 @@ public class TwoBasicRuler extends OneTypeRuler {
     }
 }
 
-        /*result.add(nowDate);
-        result.add(userID);
-        result.add(continueloginDays);
-        result.add(highRechargeAmount);
-        result.add(diandianFlag);
-        result.add(playedTimes);
-        result.add(winTimes);
-        result.add(caishenFlag);
-        result.add(caishenInterval);
-        result.add(caishenNewestDate);*/
+

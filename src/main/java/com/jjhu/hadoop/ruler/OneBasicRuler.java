@@ -14,7 +14,7 @@ public class OneBasicRuler extends OneTypeRuler {
 
     public ReturnMsg execute(String msg){
         ReturnMsg result = null;
-        String []items = msg.split("|");
+        String []items = msg.split("\\|");
         if (Float.parseFloat(items[3]) <= highRechargeAmount)
             if (Integer.parseInt(items[5]) <= playTimes)
                 if (Integer.parseInt(items[8]) > caishenInterval)
